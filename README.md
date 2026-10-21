@@ -25,6 +25,38 @@ conda activate uniforge3d
 
 ## Inference
 
+For the local browser interface on this Mac, double-click
+`Open UniForge Studio.command` or run `./tools/studio_service.sh install` and open
+**http://127.0.0.1:7861** on the Mac or **http://100.85.200.56:7861** from another Tailscale device. The frontend and API listen on **0.0.0.0:7861**. [UniForge Studio](studio/README.md) provides one-to-four-view
+uploads, a job queue, an interactive 3D preview, and GLB downloads through the
+verified local MLX runtime. New jobs use the selective oQ5 bundle and original
+DINOv3 encoder on this Mac.
+
+Selective MLX/oMLX oQ5 checkpoint conversion tools and their current validation
+status are documented in [MLX_QUANTIZATION.md](MLX_QUANTIZATION.md). The inference
+command below is the original CUDA pipeline.
+
+The recommended [complete MLX model bundle](ONNX_DINOV3.md) now includes all
+15 components, using the public original-model DINOv3 ONNX export with tested
+FP16 vision projections. The public source downloads without gated access.
+The [local MLX runtime](MLX_RUNTIME.md) now runs the full image-to-textured-GLB
+pipeline on Apple Silicon:
+
+```sh
+.venv/bin/python tools/run_mlx.py assets/case02/001.png \
+  --output run_logs/my-mlx-run
+```
+
+The validated single-view example produced a 995,066-triangle GLB with 2048px
+PBR textures. The runtime documentation includes numerical checks, the
+rendered result, timings, multiview validation scope and remaining CUDA-parity
+limits. Studio now uses this runtime by default; its older private CUDA engine
+is retained as an optional backend.
+
+The user-selected public SoftEq DINOv3 replacement, its encoder validation, and
+the choice to protect vision weights at FP16 are documented in
+[SOFTEQ_DINOV3.md](SOFTEQ_DINOV3.md).
+
 Place the views of each object directly in a separate folder under `assets/`:
 
 ```text

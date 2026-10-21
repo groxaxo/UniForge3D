@@ -9,6 +9,8 @@ import trimesh.visual
 from flex_gemm.ops.grid_sample import grid_sample_3d
 import nvdiffrast.torch as dr
 import cumesh
+from .mesh_budget import cpu_reduce_if_needed
+from .device import release_cuda
 
 
 def to_glb(
@@ -31,6 +33,7 @@ def to_glb(
     mesh_cluster_smooth_strength=1,
     verbose: bool = False,
     use_tqdm: bool = False,
+    cuda_face_budget: Optional[int] = None,
 ):
     """
     Convert an extracted mesh to a GLB file.
@@ -168,7 +171,7 @@ def to_glb(
         resolution = grid_size.max().item()
         
         # Perform Dual Contouring remeshing (rebuilds topology)
-        mesh.init(*cumesh.remeshing.remesh_narrow_band_dc(
+        remeshed_vertices, remeshed_faces = cumesh.remeshing.remesh_narrow_band_dc(
             vertices, faces,
             center = center,
             scale = (resolution + 3 * remesh_band) / resolution * scale,
@@ -177,7 +180,16 @@ def to_glb(
             project_back = remesh_project, # Snaps vertices back to original surface
             verbose = verbose,
             bvh = bvh,
-        ))
+        )
+        if cuda_face_budget is not None:
+            torch.cuda.synchronize()
+            del mesh
+            remeshed_vertices, remeshed_faces = cpu_reduce_if_needed(
+                remeshed_vertices, remeshed_faces, cuda_face_budget)
+            release_cuda()
+            mesh = cumesh.CuMesh()
+        mesh.init(remeshed_vertices, remeshed_faces)
+        del remeshed_vertices, remeshed_faces
         if verbose:
             print(f"After remeshing: {mesh.num_vertices} vertices, {mesh.num_faces} faces")
         

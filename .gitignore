@@ -18,3 +18,12 @@ __pycache__/
 /dist/
 *.egg-info/
 /.deps/
+/.venv/
+/studio/.venv/
+/studio/web/node_modules/
+/studio/web/dist/
+
+# Local inference evidence and personal input images.
+/run_logs/
+/assets/facu-20261020/
+/tools/source_verification.json

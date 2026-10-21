@@ -10,6 +10,7 @@ import trimesh
 from ..modules.sparse import SparseTensor
 from ..utils.preprocessing import InputBatch
 from ..utils.texture_baking import to_glb
+from ..utils.mesh_budget import cpu_reduce_if_needed
 from .samplers import FlowEulerSampler, model_predictor
 from .types import NormalizedShapeLatent
 
@@ -103,11 +104,14 @@ def decode_shape_and_texture(
     texture_decoder: torch.nn.Module,
     shape_vae_latent: SparseTensor,
     texture_vae_latent: SparseTensor,
+    *,
+    fill_holes: bool = True,
 ):
-    """Decode with shared subdivisions and fill holes in the reference mesh."""
+    """Decode shared subdivisions; optionally defer hole filling until after offload."""
     meshes, subdivisions = shape_decoder(shape_vae_latent, return_subs=True)
     voxels = texture_decoder(texture_vae_latent, guide_subs=subdivisions) * 0.5 + 0.5
-    meshes[0].fill_holes()
+    if fill_holes:
+        meshes[0].fill_holes()
     return meshes[0], voxels[0]
 
 
@@ -117,9 +121,13 @@ def remesh_and_bake_texture(
     mesh_config: dict[str, Any],
     mesh,
     pbr_voxel: SparseTensor,
+    *,
+    cuda_face_budget: int | None = None,
 ) -> trimesh.Trimesh:
     """Use the raw decoded surface and the official example's export settings."""
-    mesh.simplify(int(mesh_config["pre_simplify_target"]))
+    mesh.vertices, mesh.faces = cpu_reduce_if_needed(mesh.vertices, mesh.faces, cuda_face_budget)
+    if cuda_face_budget is None or len(mesh.faces) > int(mesh_config["pre_simplify_target"]):
+        mesh.simplify(int(mesh_config["pre_simplify_target"]))
     return to_glb(
         mesh.vertices,
         mesh.faces,
@@ -139,4 +147,5 @@ def remesh_and_bake_texture(
         remesh_band=float(mesh_config["remesh_band"]),
         remesh_project=float(mesh_config["remesh_project"]),
         verbose=True,
+        cuda_face_budget=cuda_face_budget,
     )

@@ -1,0 +1,19 @@
+# Conversion environment: Python 3.13 on Apple Silicon.
+mlx==0.32.2
+mlx-lm==0.32.0
+transformers==5.20.2
+torch==2.14.1
+numpy==2.3.5
+safetensors==0.8.0
+huggingface-hub==2.2.0
+pytest==9.1.1
+# Public FP32 DINOv3 recovery and independent inference reference.
+onnx==1.23.2
+onnxruntime==1.31.0
+# The local checkout must be pinned to the commit below before installation.
+# appautomaton/mlx-spatial@d2cc98ef7fb2166dc7e3b826b487e80f6f5027dc
+-e .deps/mlx-spatial
+# Local MLX runtime geometry/export and source-implementation parity tests.
+trimesh==5.1.1
+opencv-python-headless==5.0.0.93
+easydict==1.13

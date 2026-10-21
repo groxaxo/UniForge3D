@@ -1,0 +1,2 @@
+# Install into the private host's isolated cpu-mesh-deps target, not the shared CUDA env.
+fast-simplification==0.1.13

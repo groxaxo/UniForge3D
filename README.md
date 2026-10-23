@@ -57,6 +57,11 @@ The user-selected public SoftEq DINOv3 replacement, its encoder validation, and
 the choice to protect vision weights at FP16 are documented in
 [SOFTEQ_DINOV3.md](SOFTEQ_DINOV3.md).
 
+For face-photo texture correction after MLX export, the tested
+[GLB compatibility step](FACE_COMPATIBILITY.md) consolidates same-material
+primitive chunks without changing geometry, UVs or textures, then feeds the
+pinned face-retexture tool. It includes regression and complete CPU vision checks.
+
 Place the views of each object directly in a separate folder under `assets/`:
 
 ```text

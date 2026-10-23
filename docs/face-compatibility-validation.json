@@ -1,0 +1,82 @@
+{
+  "recorded_date": "2026-10-23",
+  "face_tool_revision": "832894ec8ae991eb1cd5483cd80352cd38c9c76a",
+  "adapter_regression_tests_passed": 10,
+  "face_tool_regression_tests_passed": 49,
+  "monkey_compatibility": {
+    "format": "uniforge3d-face-compat-v1",
+    "input_primitives": 11,
+    "output_primitives": 1,
+    "vertices": 684317,
+    "triangles": 992890,
+    "geometry_exact": true,
+    "attribute_rows_byte_exact": true,
+    "triangle_order_and_winding_exact": true,
+    "original_binary_prefix_exact": true,
+    "materials_images_textures_unchanged": true,
+    "index_component_type": 5125,
+    "original_viewer_bounds_preserved": true,
+    "attribute_sha256": {
+      "NORMAL": "0818237863414b4df943098ff2c142a807174709cc2b4c0a9287787ae4d482a1",
+      "POSITION": "22ed47de832d37f645d434c7cd129efd94b30ed92d3356f3b224f2acb474c2cf",
+      "TEXCOORD_0": "cf34eefb12510f2d7fa287db074415f9c83864a1ee57ef2f28a931ab65efd485"
+    },
+    "rebased_index_sha256": "5073d8c77b072f819f208739bb23acf7971b9d2cd8ae3d8543c5f5d1af6ea7e2",
+    "scope": "Same-material static chunks only; no vertex welding, material atlas merge or face correction.",
+    "input_sha256": "38674ac1f6c6a2b2fd55dae1252bb88c0296b1fd4d016be73209f2c536eaa3da",
+    "output_sha256": "6d2b75102e07207a58b9e78d487b72ed0a18f69c503f0a92b41a2a334f228ce0",
+    "input_bytes": 57233248,
+    "output_bytes": 91046008
+  },
+  "monkey_four_view_render": {
+    "different_pixels": 5,
+    "max_channel_difference": 3,
+    "pixel_exact": false,
+    "views": 4,
+    "scope": "Independent Three.js headless Chrome renders of original and final compatible Monkey King, same cameras, lighting, materials and title; preserves source union bounds metadata"
+  },
+  "end_to_end_vision": {
+    "passed": true,
+    "fixture": "Pinned upstream public NASA portrait textured-grid fixture, split into two chunks",
+    "input_primitives": 2,
+    "compatible_primitives": 1,
+    "albedo_pixel_exact_after_compatibility": true,
+    "complete_photo_retexture_passed": true,
+    "geometry_unchanged_after_face_fix": true,
+    "protected_body_changed_render_pixels": 0,
+    "changed_head_render_pixels": 19621,
+    "triangles": 1152,
+    "compatibility": {
+      "format": "uniforge3d-face-compat-v1",
+      "input_primitives": 2,
+      "output_primitives": 1,
+      "vertices": 1250,
+      "triangles": 1152,
+      "geometry_exact": true,
+      "attribute_rows_byte_exact": true,
+      "triangle_order_and_winding_exact": true,
+      "original_binary_prefix_exact": true,
+      "materials_images_textures_unchanged": true,
+      "index_component_type": 5125,
+      "original_viewer_bounds_preserved": true,
+      "attribute_sha256": {
+        "POSITION": "f70733c899a09423bcdc0dada08a693e3666b3fc4d9ae154fc7d22ad7c202ecd",
+        "TEXCOORD_0": "8aaa269a1ba20fd9fe24fcedbc9bf4006b035fcab08ef18c497d22c22f0cd5cb"
+      },
+      "rebased_index_sha256": "b315e5f3d4e002d5bced6e4b41e55217a54a672e76a187c0dca415cf07422aff",
+      "scope": "Same-material static chunks only; no vertex welding, material atlas merge or face correction.",
+      "input_sha256": "78e2f12d45bc7cdf89d7e28f61ed84e21c1ff0e7eb7f119f6ae1e878b7a94384",
+      "output_sha256": "32cfd1aa1d7e45c81c60a4e93ce2b148d4b37ed6327c69d87b114a61cbffa01d",
+      "input_bytes": 52156,
+      "output_bytes": 91408
+    },
+    "actual_model": {
+      "face_tool_input_gate_passed": true,
+      "sha256": "6d2b75102e07207a58b9e78d487b72ed0a18f69c503f0a92b41a2a334f228ce0",
+      "vertices": 684317,
+      "triangles": 992890,
+      "scope": "Input-format acceptance of the saved model; no assertion that MediaPipe recognizes its stylized face."
+    }
+  },
+  "scope": "Actual MLX Monkey King geometry/material preservation and face-tool format acceptance; complete face projection on a controlled public portrait fixture. No photo projection on the stylized Monkey King claimed."
+}

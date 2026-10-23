@@ -32,6 +32,20 @@ image to upload your own; view 01 is the anchor and the left-arrow controls
 reorder subsequent views. Use one to four views of the same object. The offered
 pipeline is 1024 geometry / 2048 texture.
 
+An **Optional** menu sits under the seed. It defaults to **None**. Installed
+SAM 3D Body checkpoints from `Comfy-Org/sam-3d-body` appear there and stay
+optional: choosing one records a **reference-only** `optional_model` on the job
+and its downloadable receipt. **SAM 3D Body is not executed**; the choice does
+not change generation. The UI states this before submission, and receipt
+provenance includes `executed: false` plus the expected checkpoint SHA256.
+Weights live in `weights/sam-3d-body/detection/`. A checkpoint is offered only
+after its safetensors header, size and complete SHA256 match the published
+[pinned source](https://huggingface.co/Comfy-Org/sam-3d-body/tree/7c974aea58e062252a6cb5b6f9b7f639d545b729/detection).
+Verification is cached by file identity/size/timestamps; changing a file
+invalidates the cache. The same weight tree is kept on the GPU host at
+`/home/op/uniforge3d-work/weights/sam-3d-body/`; it is not needed to execute this
+metadata-only selection.
+
 Completed assets include a **Reuse reference images** control beside their
 download actions. It restores the saved views, name and seed into the composer
 without starting another job. Completed MLX assets are labelled **Local MLX**.

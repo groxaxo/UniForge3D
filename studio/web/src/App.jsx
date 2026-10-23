@@ -12,6 +12,7 @@ export default function App() {
   const [images, setImages] = useState([]);
   const [name, setName] = useState("New asset");
   const [seed, setSeed] = useState(42);
+  const [optionalModel, setOptionalModel] = useState("");
   const [preserveFace, setPreserveFace] = useState(false);
   const [faceReference, setFaceReference] = useState(null);
   const [error, setError] = useState("");
@@ -102,6 +103,7 @@ export default function App() {
         });
         form.set("face_reference", face, "face-reference.png");
       }
+      if (optionalModel) form.set("optional_model", optionalModel);
       const files = await Promise.all(
         images.map(async (image) => {
           const file =
@@ -217,6 +219,8 @@ export default function App() {
           setName={setName}
           seed={seed}
           setSeed={setSeed}
+          optionalModel={optionalModel}
+          setOptionalModel={setOptionalModel}
           preserveFace={preserveFace}
           setPreserveFace={setPreserveFace}
           faceReference={faceReference}

@@ -12,6 +12,7 @@ import mlx.core as mx
 import numpy as np
 
 from .checkpoint import load_checkpoint
+from .export_timings import export_timing_breakdown
 from .decoding import decode_sparse, decode_structure
 from .dinov3 import DinoV3Encoder
 from .flow import JointStructureFlow, RoutedFlow
@@ -499,13 +500,17 @@ class Pipeline:
             from mlx_spatial.ovoxel_export import export_ovoxel_glb
 
             output = self.output / "model.glb"
-            export_ovoxel_glb(
+            exported = export_ovoxel_glb(
                 self.output,
                 output,
                 texture_size=self.config["texture"]["texture_size"],
                 target_faces=self.config["texture"]["decimation_target"],
                 grid_size=1024,
             )
+            breakdown = export_timing_breakdown(exported.diagnostics)
+            self.report["export_timings_seconds"] = breakdown
+            for name, seconds in breakdown.items():
+                self.log(f"export {name}: {seconds:.1f}s")
             self.report["glb"] = {
                 "path": str(output),
                 "sha256": sha256(output),

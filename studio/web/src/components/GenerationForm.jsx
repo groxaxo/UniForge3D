@@ -18,12 +18,18 @@ export default function GenerationForm({
   health,
   upload,
   onReferenceInput,
+  optionalModel,
+  setOptionalModel,
   preserveFace,
   setPreserveFace,
   faceReference,
   setFaceReference,
 }) {
   const [preparing, setPreparing] = useState(false);
+  const optionalModels = (health?.models || [
+    { id: "sam-3d-body-bf16", label: "SAM 3D Body · BF16", optional: true, installed: false },
+    { id: "sam-3d-body-int8", label: "SAM 3D Body · INT8 ConvRot", optional: true, installed: false },
+  ]).filter((item) => item.optional);
   const ready =
     images.length >= (health?.min_views || 4) && images.length <= 4 &&
     name.trim() &&
@@ -90,6 +96,28 @@ export default function GenerationForm({
               </button>
             </div>
           </div>
+          <label className="field-row">
+            <span id="optional-model-label">Optional</span>
+            <select
+              id="optional-model"
+              aria-labelledby="optional-model-label"
+              aria-describedby="optional-model-help"
+              value={optionalModel}
+              disabled={submitting}
+              onChange={(event) => setOptionalModel(event.target.value)}
+            >
+              <option value="">None</option>
+              {optionalModels.map((item) => (
+                <option key={item.id} value={item.id} disabled={!item.installed}>
+                  {item.installed ? item.label : `${item.label} (${item.verification === "invalid"
+                    ? "verification failed" : item.verification === "incomplete" ? "incomplete download" : "not installed"})`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p id="optional-model-help" className="engine-note">
+            Reference checkpoint only. SAM 3D Body processing is not integrated yet.
+          </p>
           <div className="face-preserve-field">
             <label className="face-preserve-toggle">
               <input
@@ -140,6 +168,11 @@ export default function GenerationForm({
           </dl>
         </div>
         <div className="generation-footer">
+          {optionalModel && (
+            <p className="engine-note">
+              This checkpoint choice is saved with the job and download receipt as a reference.
+            </p>
+          )}
           <p className="engine-note">
             {health?.engine_id === "mlx"
               ? "Runs locally on this Mac. Allow about 30 minutes for one image; additional views can take longer."

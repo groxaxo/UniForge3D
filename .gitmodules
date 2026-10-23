@@ -1,0 +1,3 @@
+[submodule "tools/ComfyUI-GLB-Face-Retexture"]
+	path = tools/ComfyUI-GLB-Face-Retexture
+	url = https://github.com/KaletoAI/ComfyUI-GLB-Face-Retexture

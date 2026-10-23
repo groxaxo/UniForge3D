@@ -20,6 +20,14 @@ LABELS = {'preprocess': 'Prepare images', 'dino': 'Read visual features',
           'shape1024': 'Refine geometry', 'texture': 'Generate texture', 'decode': 'Bake & export'}
 
 
+def completed_stage(phase, seconds, export_timings=None):
+    """Keep the export sub-stage clock on the decode entry of every run."""
+    entry = {'phase': phase, 'seconds': seconds}
+    if phase == 'decode' and export_timings:
+        entry['export_stages'] = dict(export_timings)
+    return entry
+
+
 def run(folder):
     import mlx.core as mx
     from uniforge3d_mlx.pipeline import Pipeline
@@ -75,7 +83,8 @@ def run(folder):
                 elapsed[phase] = elapsed.get(phase, 0) + time.monotonic() - start
                 finish = {'shape512': 'handoff', 'decode': 'export'}.get(phase, phase)
                 if name == finish:
-                    state['completed_stages'].append({'phase': phase, 'seconds': elapsed[phase]})
+                    state['completed_stages'].append(completed_stage(
+                        phase, elapsed[phase], self.report.get('export_timings_seconds')))
                     update()
                 return result
 

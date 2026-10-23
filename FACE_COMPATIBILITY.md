@@ -4,6 +4,14 @@
 into one indexed primitive accepted by the pinned
 [ComfyUI-GLB-Face-Retexture v1.4.0](https://github.com/KaletoAI/ComfyUI-GLB-Face-Retexture/tree/832894ec8ae991eb1cd5483cd80352cd38c9c76a).
 This is a separate post-processing step; the upstream tool remains unchanged.
+The pinned tool is tracked as a Git submodule. Initialize it after a normal
+clone (or clone this repository with `--recurse-submodules`):
+
+```sh
+git submodule update --init --recursive tools/ComfyUI-GLB-Face-Retexture
+```
+
+Its isolated `.venv` and downloaded `models/` remain local and are not committed.
 
 ## Convert, then correct the face texture
 

@@ -1,11 +1,14 @@
 """API boundary and job lifecycle tests; the separate browser run uses the real GPU."""
 import io
+import hashlib
 import json
+import os
 from pathlib import Path
 import threading
 import time
 import struct
 from types import SimpleNamespace
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -25,6 +28,22 @@ def png():
 
 def uploads(count=4, data=None):
     return [('files', (f'view{i}.png', data if data is not None else png(), 'image/png')) for i in range(count)]
+
+
+def verified_sam_checkpoint(models_dir, monkeypatch):
+    """A complete tiny safetensors file avoids allocating multi-GB test weights."""
+    from studio.server import optional_models
+    header = json.dumps({'weight': {'dtype': 'BF16', 'shape': [2], 'data_offsets': [0, 4]}}).encode()
+    header += b' ' * (-len(header) % 8)
+    data = struct.pack('<Q', len(header)) + header + b'\0\0\0\0'
+    path = models_dir / 'detection/sam_3d_body_dinov3_bf16.safetensors'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    specs = tuple({**item, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+                  if item['id'] == 'sam-3d-body-bf16' else item
+                  for item in optional_models.OPTIONAL_MODELS)
+    monkeypatch.setattr(optional_models, 'OPTIONAL_MODELS', specs)
+    return path
 
 
 class Bridge:
@@ -338,6 +357,144 @@ def test_network_frontend_and_api_accept_configured_origin(client, host, port):
     # An empty submission must reach validation without starting generation.
     assert web.post('/api/jobs', headers=headers).status_code == 422
     assert store.pending.empty()
+
+
+def test_optional_sam_model_is_listed_and_refused_until_the_file_is_complete(tmp_path):
+    app = create_app(Settings(data=tmp_path / 'jobs', models_dir=tmp_path / 'models'), Bridge())
+    with TestClient(app) as web:
+        catalog = web.get('/api/health').json()['models']
+        assert catalog[0] == {'id': 'uniforge3d', 'label': 'UniForge3D', 'optional': False, 'installed': True}
+        optional = [item for item in catalog if item['optional']]
+        assert [item['id'] for item in optional] == ['sam-3d-body-bf16', 'sam-3d-body-int8']
+        assert [item['installed'] for item in optional] == [False, False]
+        refused = web.post('/api/jobs', headers=HEADERS, files=uploads(), data={'optional_model': 'sam-3d-body-bf16'})
+        assert refused.status_code == 422
+        assert web.post('/api/jobs', headers=HEADERS, files=uploads(), data={'optional_model': 'uniforge3d'}).status_code == 422
+        assert web.get('/api/jobs').json() == []
+        job = web.post('/api/jobs', headers=HEADERS, files=uploads()).json()
+        assert job['optional_model'] is None
+        web.post(f'/api/jobs/{job["id"]}/cancel', headers=HEADERS)
+
+
+def test_installed_sam_checkpoint_stays_optional_and_uniforge_still_generates(tmp_path, monkeypatch):
+    verified_sam_checkpoint(tmp_path / 'models', monkeypatch)
+    bridge = Bridge()
+    app = create_app(Settings(data=tmp_path / 'jobs', models_dir=tmp_path / 'models'), bridge)
+    with TestClient(app) as web:
+        catalog = {item['id']: item for item in web.get('/api/health').json()['models']}
+        assert catalog['sam-3d-body-bf16']['installed'] is True
+        assert catalog['sam-3d-body-bf16']['optional'] is True
+        assert catalog['sam-3d-body-bf16']['verification'] == 'verified'
+        assert catalog['sam-3d-body-bf16']['usage'] == 'reference-only'
+        assert catalog['sam-3d-body-int8']['installed'] is False
+        result = web.post('/api/jobs', headers=HEADERS, files=uploads(), data={'optional_model': 'sam-3d-body-bf16'})
+        assert result.status_code == 202
+        job = result.json()
+        assert job['optional_model'] == 'sam-3d-body-bf16'
+        assert job['engine'] == 'cuda'
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and not bridge.started:
+            time.sleep(0.02)
+        assert len(bridge.started) == 1
+        missing = web.post('/api/jobs', headers=HEADERS, files=uploads(), data={'optional_model': 'sam-3d-body-int8'})
+        assert missing.status_code == 422
+        web.post(f'/api/jobs/{job["id"]}/cancel', headers=HEADERS)
+
+
+def test_same_size_corrupt_sam_checkpoint_is_not_offered(tmp_path):
+    from studio.server.app import model_catalog
+    folder = tmp_path / 'detection'
+    folder.mkdir()
+    checkpoint = folder / 'sam_3d_body_dinov3_bf16.safetensors'
+    checkpoint.touch()
+    os.truncate(checkpoint, 2830737652)
+    catalog = {item['id']: item for item in model_catalog(tmp_path)}
+    assert catalog['sam-3d-body-bf16']['installed'] is False
+
+
+def test_sam_verification_cache_invalidates_when_same_size_contents_change(tmp_path, monkeypatch):
+    from studio.server.app import model_catalog
+    checkpoint = verified_sam_checkpoint(tmp_path, monkeypatch)
+    assert model_catalog(tmp_path)[1]['installed'] is True
+    data = bytearray(checkpoint.read_bytes())
+    data[-1] ^= 1
+    checkpoint.write_bytes(data)
+    item = model_catalog(tmp_path)[1]
+    assert item['installed'] is False
+    assert item['verification'] == 'invalid'
+
+
+def test_sam_health_checks_do_not_rehash_unchanged_weights(tmp_path, monkeypatch):
+    from studio.server.app import model_catalog
+    checkpoint = verified_sam_checkpoint(tmp_path, monkeypatch)
+    original = Path.open
+    reads = []
+    def open_file(path, *args, **kwargs):
+        if path == checkpoint:
+            reads.append(path)
+        return original(path, *args, **kwargs)
+    monkeypatch.setattr(Path, 'open', open_file)
+    assert model_catalog(tmp_path)[1]['installed'] is True
+    assert model_catalog(tmp_path)[1]['installed'] is True
+    assert len(reads) == 1
+
+
+def test_none_selection_does_not_scan_optional_checkpoints(client, monkeypatch):
+    def forbidden(*args):
+        raise AssertionError('A None selection must not scan optional model files')
+    monkeypatch.setattr('studio.server.app.model_catalog', forbidden)
+    web, _, _ = client
+    response = web.post('/api/jobs', headers=HEADERS, files=uploads())
+    assert response.status_code == 202
+    web.post(f'/api/jobs/{response.json()["id"]}/cancel', headers=HEADERS)
+
+
+def test_checkpoint_verification_does_not_block_job_polling(tmp_path, monkeypatch):
+    entered = threading.Event()
+    release = threading.Event()
+    def slow_catalog(*args):
+        entered.set()
+        assert release.wait(5)
+        return [{'id': 'sam-3d-body-bf16', 'optional': True, 'installed': True}]
+    monkeypatch.setattr('studio.server.app.model_catalog', slow_catalog)
+    app = create_app(Settings(data=tmp_path), Bridge())
+    with TestClient(app) as web, ThreadPoolExecutor(max_workers=2) as pool:
+        submission = pool.submit(web.post, '/api/jobs', headers=HEADERS, files=uploads(),
+                                 data={'optional_model': 'sam-3d-body-bf16'})
+        assert entered.wait(2)
+        polling = pool.submit(web.get, '/api/jobs')
+        try:
+            assert polling.result(timeout=1.5).status_code == 200
+        finally:
+            release.set()
+        response = submission.result(timeout=3)
+        assert response.status_code == 202
+        web.post(f'/api/jobs/{response.json()["id"]}/cancel', headers=HEADERS)
+
+
+@pytest.mark.parametrize('with_face', [False, True])
+def test_optional_checkpoint_reference_survives_in_downloadable_receipt(tmp_path, monkeypatch, with_face):
+    from studio.server import app as server
+    from studio.server.remote_runner import glb_metadata
+    bridge = Bridge()
+    bridge.engine = 'cuda3090'
+    bridge.read_status = lambda _: {'status': 'complete', 'completed_stages': [], 'metadata': {}}
+    def fetch(identifier, folder, metadata):
+        (folder / 'prediction.glb').write_bytes(triangle_glb())
+        (folder / 'receipt.json').write_text('{"engine":"cuda3090"}')
+        return glb_metadata(folder / 'prediction.glb')
+    bridge.fetch = fetch
+    monkeypatch.setattr(server, 'preserve_face', lambda *args, **kwargs: {
+        'status': 'skipped', 'message': 'Original texture kept'})
+    store = JobStore(Settings(data=tmp_path), bridge)
+    job = store.add('Optional reference', 42, [png()], 'sam-3d-body-bf16', preserve_face=with_face)
+    store.execute(job['id'])
+    receipt = json.loads((tmp_path / job['id'] / 'receipt.json').read_text())
+    generation = receipt['generation_receipt'] if with_face else receipt
+    assert generation['optional_model']['id'] == 'sam-3d-body-bf16'
+    assert generation['optional_model']['executed'] is False
+    assert generation['optional_model']['usage'] == 'reference-only'
+    assert generation['engine'] == 'cuda3090'
 
 
 def test_network_requests_reject_cross_origin_and_unknown_hosts(client):

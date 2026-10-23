@@ -28,6 +28,7 @@ from starlette.concurrency import run_in_threadpool
 from .remote_runner import glb_metadata
 from .local_bridge import LocalBridge
 from .face_preservation import face_readiness, preserve_face, FaceCancelled
+from .optional_models import model_catalog, optional_model_record
 
 ROOT = Path(__file__).resolve().parents[2]
 PHASES = ['preprocess', 'dino', 'structure', 'shape512', 'shape1024', 'texture', 'decode']
@@ -47,6 +48,7 @@ class Settings:
         'UNIFORGE_ALLOWED_HOSTS',
         '127.0.0.1,localhost,testserver,100.85.200.56,172.20.10.2,op-2.local',
     ).split(',') if host.strip())
+    models_dir: Path = ROOT / 'weights' / 'sam-3d-body'
 
 
 def atomic_json(path, value):
@@ -224,7 +226,7 @@ class JobStore:
                 raise HTTPException(404, 'Asset not found')
             return dict(self.jobs[job_id])
 
-    def add(self, name, seed, images, *, preserve_face=False, face_reference=None):
+    def add(self, name, seed, images, optional_model=None, *, preserve_face=False, face_reference=None):
         with self.lock:
             if sum(job['status'] not in TERMINAL for job in self.jobs.values()) >= 6:
                 raise HTTPException(429, 'The queue is full. Wait for an asset to finish before adding another.')
@@ -240,7 +242,8 @@ class JobStore:
                 'message': 'In the generation queue', 'engine': self.engine,
                 'encoder': getattr(self.bridge, 'encoder',
                     'Original DINOv3' if self.engine == 'mlx' else 'SoftEq DINOv3'),
-                'view_count': len(images),
+                'view_count': len(images), 'optional_model': optional_model,
+                'optional_model_info': optional_model_record(optional_model) if optional_model else None,
                 'preserve_face': preserve_face,
                 'face_reference_url': f'/api/jobs/{job_id}/face-reference' if preserve_face else None,
                 'model_url': None, 'cover_url': f'/api/jobs/{job_id}/images/1'}
@@ -322,6 +325,12 @@ class JobStore:
                 self.update(job_id, status='downloading', message='Verifying your local asset' if job.get('engine') == 'mlx' else 'Bringing your asset back to this Mac',
                             completed_stages=state['completed_stages'], stage=None)
                 metadata = bridge.fetch(job_id, folder, state['metadata'])
+                if job.get('optional_model'):
+                    receipt_path = folder / 'receipt.json'
+                    receipt = json.loads(receipt_path.read_text())
+                    receipt['optional_model'] = (job.get('optional_model_info')
+                                                 or optional_model_record(job['optional_model']))
+                    atomic_json(receipt_path, receipt)
                 if job.get('preserve_face'):
                     original = folder / 'generation.glb'
                     if not original.exists():
@@ -398,6 +407,7 @@ def create_app(settings=None, bridge=None):
     @app.get('/api/health')
     def health():
         payload = dict(store.health())
+        payload['models'] = model_catalog(settings.models_dir)
         payload['face_preservation'] = face_readiness()
         return payload
 
@@ -408,13 +418,22 @@ def create_app(settings=None, bridge=None):
 
     @app.post('/api/jobs', status_code=202)
     async def create_job(files: list[UploadFile] = File(...), name: str = Form('Untitled asset'), seed: int = Form(42),
-                         preserve_face: bool = Form(False),
+                         optional_model: str = Form(''), preserve_face: bool = Form(False),
                          face_reference: UploadFile | None = File(None)):
         try:
             if preserve_face and not face_readiness()['available']:
                 raise HTTPException(422, 'Install the local face-correction worker before selecting Preserve face.')
             if face_reference is not None and not preserve_face:
                 raise HTTPException(422, 'Select Preserve face to use a face reference.')
+            optional_model = optional_model.strip()
+            if optional_model:
+                models = await run_in_threadpool(model_catalog, settings.models_dir)
+                catalog = {item['id']: item for item in models}
+                chosen = catalog.get(optional_model)
+                if chosen is None or not chosen['optional']:
+                    raise HTTPException(422, 'Choose an optional model from the menu, or leave it unset.')
+                if not chosen['installed']:
+                    raise HTTPException(422, 'That optional checkpoint is missing, incomplete or failed verification.')
             min_views = getattr(store.bridge, 'min_views', 1 if store.engine == 'mlx' else 4)
             if not (min_views <= len(files) <= 4):
                 raise HTTPException(422, 'Choose one to four views of the same object.' if min_views == 1 else 'Choose exactly four views of the same object.')
@@ -442,7 +461,7 @@ def create_app(settings=None, bridge=None):
                     health.get('message') or 'The private GPU is not ready. Check its status and try again.',
                     headers={'Retry-After': '15'},
                 )
-            return store.add(name, seed, images,
+            return store.add(name, seed, images, optional_model or None,
                              preserve_face=preserve_face, face_reference=reference)
         finally:
             for upload in files:

@@ -12,6 +12,8 @@ export default function App() {
   const [images, setImages] = useState([]);
   const [name, setName] = useState("New asset");
   const [seed, setSeed] = useState(42);
+  const [preserveFace, setPreserveFace] = useState(false);
+  const [faceReference, setFaceReference] = useState(null);
   const [error, setError] = useState("");
   const [connectionError, setConnectionError] = useState("");
   const [selectedId, setSelectedId] = useState("example");
@@ -92,6 +94,14 @@ export default function App() {
       const form = new FormData();
       form.set("name", name.trim());
       form.set("seed", seed);
+      form.set("preserve_face", preserveFace ? "true" : "false");
+      if (preserveFace && faceReference) {
+        const face = faceReference.file || await fetch(faceReference.url).then((response) => {
+          if (!response.ok) throw new Error("The face reference could not be loaded.");
+          return response.blob();
+        });
+        form.set("face_reference", face, "face-reference.png");
+      }
       const files = await Promise.all(
         images.map(async (image) => {
           const file =
@@ -137,6 +147,8 @@ export default function App() {
     );
     setName(job.name);
     setSeed(job.seed);
+    setPreserveFace(Boolean(job.preserve_face));
+    setFaceReference(job.face_reference_url ? {url: job.face_reference_url, name: "Saved face reference"} : null);
     setError("");
     document
       .querySelector(".input-rail")
@@ -201,6 +213,10 @@ export default function App() {
           setName={setName}
           seed={seed}
           setSeed={setSeed}
+          preserveFace={preserveFace}
+          setPreserveFace={setPreserveFace}
+          faceReference={faceReference}
+          setFaceReference={setFaceReference}
           error={error}
           setError={setError}
           onExample={() => loadExample()}

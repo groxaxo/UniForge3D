@@ -12,6 +12,7 @@ from pathlib import Path
 import queue
 import re
 import shlex
+import shutil
 import subprocess
 import threading
 import time
@@ -26,6 +27,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .remote_runner import glb_metadata
 from .local_bridge import LocalBridge
+from .face_preservation import face_readiness, preserve_face, FaceCancelled
 
 ROOT = Path(__file__).resolve().parents[2]
 PHASES = ['preprocess', 'dino', 'structure', 'shape512', 'shape1024', 'texture', 'decode']
@@ -216,7 +218,7 @@ class JobStore:
                 raise HTTPException(404, 'Asset not found')
             return dict(self.jobs[job_id])
 
-    def add(self, name, seed, images):
+    def add(self, name, seed, images, *, preserve_face=False, face_reference=None):
         with self.lock:
             if sum(job['status'] not in TERMINAL for job in self.jobs.values()) >= 6:
                 raise HTTPException(429, 'The queue is full. Wait for an asset to finish before adding another.')
@@ -225,12 +227,16 @@ class JobStore:
             (folder / 'input').mkdir(parents=True)
             for i, data in enumerate(images, 1):
                 (folder / 'input' / f'{i:03d}.png').write_bytes(data)
+            if preserve_face:
+                (folder / 'face-reference.png').write_bytes(face_reference or images[0])
             self.jobs[job_id] = {'id': job_id, 'name': name, 'seed': seed, 'status': 'queued',
                 'stage': None, 'completed_stages': [], 'created_at': time.time(), 'cancel_requested': False,
                 'message': 'In the generation queue', 'engine': self.engine,
                 'encoder': getattr(self.bridge, 'encoder',
                     'Original DINOv3' if self.engine == 'mlx' else 'SoftEq DINOv3'),
                 'view_count': len(images),
+                'preserve_face': preserve_face,
+                'face_reference_url': f'/api/jobs/{job_id}/face-reference' if preserve_face else None,
                 'model_url': None, 'cover_url': f'/api/jobs/{job_id}/images/1'}
             job = self.update(job_id)
             self.pending.put((job['created_at'], job_id))
@@ -310,6 +316,39 @@ class JobStore:
                 self.update(job_id, status='downloading', message='Verifying your local asset' if job.get('engine') == 'mlx' else 'Bringing your asset back to this Mac',
                             completed_stages=state['completed_stages'], stage=None)
                 metadata = bridge.fetch(job_id, folder, state['metadata'])
+                if job.get('preserve_face'):
+                    original = folder / 'generation.glb'
+                    if not original.exists():
+                        shutil.copyfile(folder / 'prediction.glb', original)
+                    if glb_metadata(original) != metadata:
+                        raise RuntimeError('The retained generation output does not match its receipt')
+                    self.update(job_id, status='running', stage='face', message='Preserving the reference face')
+                    try:
+                        face = preserve_face(folder / 'prediction.glb', folder / 'face-reference.png',
+                            folder / 'face-preservation',
+                            cancelled=lambda: self.stop.is_set() or self.get(job_id)['cancel_requested'],
+                            progress=lambda message: self.update(job_id, message=message))
+                    except FaceCancelled:
+                        if not self.stop.is_set():
+                            self.update(job_id, status='cancelled', stage=None, message='Generation cancelled')
+                        return
+                    if face['status'] == 'applied':
+                        candidate = folder / 'face-publication.download'
+                        shutil.copyfile(face.pop('output'), candidate)
+                        checked = glb_metadata(candidate)
+                        if checked != face['metadata']:
+                            candidate.unlink(missing_ok=True)
+                            raise RuntimeError('Face-corrected GLB failed publication verification')
+                        candidate.replace(folder / 'prediction.glb')
+                        metadata = checked
+                    receipt_path = folder / 'receipt.json'
+                    generation_receipt = json.loads(receipt_path.read_text())
+                    atomic_json(receipt_path, {'format': 'uniforge-studio-face-preservation-v1',
+                        'engine': job['engine'], 'studio_job_id': job_id,
+                        'generation_receipt': generation_receipt, 'face_preservation': face,
+                        'output': metadata, **metadata})
+                    self.update(job_id, face_preservation=face)
+                    selected['message'] = 'Asset ready · face preserved' if face['status'] == 'applied' else face['message']
                 self.update(job_id, **selected, metadata=metadata, model_url=f'/api/jobs/{job_id}/model',
                             download_url=f'/api/jobs/{job_id}/download', receipt_url=f'/api/jobs/{job_id}/receipt')
                 return
@@ -352,7 +391,9 @@ def create_app(settings=None, bridge=None):
 
     @app.get('/api/health')
     def health():
-        return store.health()
+        payload = dict(store.health())
+        payload['face_preservation'] = face_readiness()
+        return payload
 
     @app.get('/api/jobs')
     def jobs():
@@ -360,8 +401,14 @@ def create_app(settings=None, bridge=None):
             return sorted([dict(job) for job in store.jobs.values()], key=lambda job: job['created_at'], reverse=True)
 
     @app.post('/api/jobs', status_code=202)
-    async def create_job(files: list[UploadFile] = File(...), name: str = Form('Untitled asset'), seed: int = Form(42)):
+    async def create_job(files: list[UploadFile] = File(...), name: str = Form('Untitled asset'), seed: int = Form(42),
+                         preserve_face: bool = Form(False),
+                         face_reference: UploadFile | None = File(None)):
         try:
+            if preserve_face and not face_readiness()['available']:
+                raise HTTPException(422, 'Install the local face-correction worker before selecting Preserve face.')
+            if face_reference is not None and not preserve_face:
+                raise HTTPException(422, 'Select Preserve face to use a face reference.')
             min_views = getattr(store.bridge, 'min_views', 1 if store.engine == 'mlx' else 4)
             if not (min_views <= len(files) <= 4):
                 raise HTTPException(422, 'Choose one to four views of the same object.' if min_views == 1 else 'Choose exactly four views of the same object.')
@@ -376,6 +423,12 @@ def create_app(settings=None, bridge=None):
                     images.append(await run_in_threadpool(normalize_image, await upload.read(MAX_FILE + 1)))
                 except ValueError as exc:
                     raise HTTPException(422, str(exc)) from exc
+            reference = None
+            if face_reference is not None:
+                try:
+                    reference = await run_in_threadpool(normalize_image, await face_reference.read(MAX_FILE + 1))
+                except ValueError as exc:
+                    raise HTTPException(422, str(exc)) from exc
             health = await run_in_threadpool(store.health)
             if not health.get('ready'):
                 raise HTTPException(
@@ -383,10 +436,13 @@ def create_app(settings=None, bridge=None):
                     health.get('message') or 'The private GPU is not ready. Check its status and try again.',
                     headers={'Retry-After': '15'},
                 )
-            return store.add(name, seed, images)
+            return store.add(name, seed, images,
+                             preserve_face=preserve_face, face_reference=reference)
         finally:
             for upload in files:
                 await upload.close()
+            if face_reference is not None:
+                await face_reference.close()
 
     @app.get('/api/jobs/{job_id}')
     def get_job(job_id: str):
@@ -432,6 +488,8 @@ def create_app(settings=None, bridge=None):
     @app.get('/api/jobs/{job_id}/{kind}')
     def job_file(job_id: str, kind: str):
         job = store.get(job_id)
+        if kind == 'face-reference' and job.get('preserve_face'):
+            return image_response(settings.data / job_id / 'face-reference.png', False)
         if kind not in {'model', 'download', 'receipt'} or job['status'] != 'complete':
             raise HTTPException(404, 'This asset is not ready yet')
         if kind == 'receipt':

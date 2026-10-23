@@ -18,6 +18,10 @@ export default function GenerationForm({
   health,
   upload,
   onReferenceInput,
+  preserveFace,
+  setPreserveFace,
+  faceReference,
+  setFaceReference,
 }) {
   const [preparing, setPreparing] = useState(false);
   const ready =
@@ -85,6 +89,40 @@ export default function GenerationForm({
                 <Shuffle size={17} />
               </button>
             </div>
+          </div>
+          <div className="face-preserve-field">
+            <label className="face-preserve-toggle">
+              <input
+                type="checkbox"
+                checked={preserveFace}
+                disabled={submitting || !health?.face_preservation?.available}
+                onChange={(event) => setPreserveFace(event.target.checked)}
+                aria-describedby="preserve-face-help"
+              />
+              <span>Preserve face</span>
+            </label>
+            <p id="preserve-face-help">
+              {health?.face_preservation?.available
+                ? "Restore the visible face from a matching photo. Geometry stays unchanged."
+                : "The local face-correction worker is unavailable."}
+            </p>
+            {preserveFace && (
+              <div className="face-reference-field">
+                <label htmlFor="face-reference">Face reference (optional)</label>
+                <input id="face-reference" type="file" accept="image/png,image/jpeg,image/webp"
+                  disabled={submitting}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) setFaceReference({file, name: file.name});
+                    event.target.value = "";
+                  }} />
+                {faceReference && <div className="face-reference-name">
+                  <span>{faceReference.name}</span>
+                  <button type="button" onClick={() => setFaceReference(null)} disabled={submitting}>Remove</button>
+                </div>}
+                <p>Use a clear face close-up, or we’ll try view 1. If matching fails, the original texture is kept and the result is marked skipped.</p>
+              </div>
+            )}
           </div>
           <dl className="model-settings">
             <div>

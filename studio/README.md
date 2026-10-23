@@ -238,3 +238,35 @@ Further export retries can reuse it without repeating either VAE or sampling.
 The configured Context7 service answered its liveness probe but its documentation
 quota was exhausted; the helper API was checked against the installed pinned
 package source and exercised on the private host before use.
+
+## Preserve face
+
+The generation form includes an optional **Preserve face** checkbox. It runs a
+local CPU face-photo correction after either MLX or CUDA generation. Add a clear,
+matching face close-up, or leave that field empty to try the first reference view.
+The option and normalized reference are stored with the job and restored when
+reusing its references. The API rejects the option before queueing if the local
+worker/models are missing.
+
+The pinned `tools/ComfyUI-GLB-Face-Retexture` v1.4.0 installation needs its own
+Python 3.12 `.venv` and downloaded models; see its installer and
+[the compatibility instructions](../FACE_COMPATIBILITY.md). Install it separately
+from both the Studio API and MLX environments. The Studio queue runs the tested
+same-material chunk converter first, then the face worker, with skin recolor
+left off. There is no cloud request or repeated neural 3D generation.
+
+Publication requires unchanged geometry, original embedded-image preservation,
+equal triangle counts, zero changed protected-body pixels and a valid output GLB.
+Applied results say **Face preserved from your reference photo**. If the model or
+photo cannot be matched, Studio keeps the generated GLB and displays **Face
+correction could not be applied. Original face texture kept.** It never labels a
+failed match as a preserved face. This corrects visible texture, not silhouette,
+missing anatomy or expression. A recognizable matching face is required in the
+photo and rendered source.
+
+The original generation is retained as `generation.glb`. Corrected candidates,
+comparison images, verification proofs and logs are under
+`face-preservation/<attempt-id>/`. The download receipt wraps the original
+generation receipt and records the post-process result and actual published GLB
+hash. Cancellation stops only that face worker's process group; API restart
+leaves the job resumable. The checkbox is off by default.

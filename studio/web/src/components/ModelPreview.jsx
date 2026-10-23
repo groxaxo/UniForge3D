@@ -124,6 +124,11 @@ export default function ModelPreview({ asset, onCancel, onRetry }) {
               {error}
             </p>
           )}
+          {asset.face_preservation && (
+            <p className={`face-result face-result-${asset.face_preservation.status}`} role="status">
+              {asset.face_preservation.status === "applied" ? "✓ " : ""}{asset.face_preservation.message}
+            </p>
+          )}
           <div className="orbit-toolbar">
             <Rotate3D size={19} />
             <span>Drag to orbit</span>

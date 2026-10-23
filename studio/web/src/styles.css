@@ -1451,3 +1451,15 @@ dd {
     margin-top: 10px;
   }
 }
+
+.face-preserve-field { padding: 14px 0; border-top: 1px solid var(--border, #e6e8ec); }
+.face-preserve-toggle { display: flex; align-items: center; gap: 9px; font-weight: 600; cursor: pointer; }
+.face-preserve-toggle input[type="checkbox"] { width: 17px; height: 17px; margin: 0; accent-color: #2563eb; }
+.face-preserve-field p { margin: 7px 0 0; color: #626b79; font-size: 12px; line-height: 1.5; }
+.face-reference-field { margin-top: 13px; }
+.face-reference-field > label { display: block; font-size: 12px; margin-bottom: 6px; }
+.face-reference-field input[type="file"] { width: 100%; max-width: 100%; font-size: 12px; padding: 7px 0; }
+.face-reference-name { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.face-reference-name button { background: none; border: 0; color: #245dcc; padding: 5px; cursor: pointer; }
+.face-result { position: absolute; left: 18px; right: 18px; bottom: 88px; z-index: 2; margin: 0; padding: 9px 12px; border-radius: 8px; background: rgba(245,248,255,.96); color: #234985; font-size: 12px; line-height: 1.45; }
+.face-result-skipped { background: rgba(255,249,232,.96); color: #785510; }

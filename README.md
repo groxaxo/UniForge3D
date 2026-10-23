@@ -36,6 +36,10 @@ switching, photo selection, downloads and sharing. Build it with
 `./tools/build_ios.sh simulator` or export a signed development IPA with
 `./tools/build_ios.sh device`. Generation runs on the selected Mac or CUDA backend.
 
+Both mobile apps offer **Mac MLX**, **RTX 3060 on .54** and **RTX 3090 on .51** in
+their native engine menu. The [3090 backend](BACKENDS.md) uses the existing
+`.51:12434` proxy and shared GPUQ, with a flexible one-GPU reservation per job.
+
 For the local browser interface on this Mac, double-click
 `Open UniForge Studio.command` or run `./tools/studio_service.sh install` and open
 **http://127.0.0.1:7861** on the Mac or **http://100.85.200.56:7861** from another Tailscale device. The frontend and API listen on **0.0.0.0:7861**. [UniForge Studio](studio/README.md) provides one-to-four-view

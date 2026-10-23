@@ -48,7 +48,7 @@ struct StudioRootView: View {
                             }
                         }
                     } label: {
-                        Label(session.engine == .mlx ? "Mac MLX" : "RTX 3060", systemImage: "server.rack")
+                        Label(session.engine.shortName, systemImage: "server.rack")
                     }
                     .accessibilityLabel("Choose generation engine")
                     .accessibilityIdentifier("studio.engine-menu")

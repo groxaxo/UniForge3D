@@ -3,14 +3,17 @@ import XCTest
 @testable import UniForgeStudio
 
 final class StudioEndpointTests: XCTestCase {
-    func testBothEnginesConstructTheExpectedPrivateURL() throws {
+    func testAllEnginesConstructTheExpectedPrivateURL() throws {
         let mlx = try XCTUnwrap(StudioEngine.mlx.url)
         let cuda = try XCTUnwrap(StudioEngine.cuda.url)
+        let cuda3090 = try XCTUnwrap(StudioEngine.cuda3090.url)
         XCTAssertEqual(mlx.absoluteString, "http://100.85.200.56:7861/")
         XCTAssertEqual(cuda.absoluteString, "http://100.85.200.56:7863/")
-        XCTAssertEqual(Set(StudioEngine.allCases.map(\.id)).count, 2)
+        XCTAssertEqual(cuda3090.absoluteString, "http://100.85.200.56:7864/")
+        XCTAssertEqual(Set(StudioEngine.allCases.map(\.id)).count, 3)
         XCTAssertTrue(StudioURLPolicy.allows(mlx))
         XCTAssertTrue(StudioURLPolicy.allows(cuda))
+        XCTAssertTrue(StudioURLPolicy.allows(cuda3090))
     }
 
     func testAssetAndQueryPathsRemainOnTheirAllowedOrigin() throws {

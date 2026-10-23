@@ -1,9 +1,10 @@
 import Foundation
 
-/// The two private generation queues exposed by the Mac's Studio service.
+/// Private generation queues exposed by the Mac's Studio service.
 enum StudioEngine: String, CaseIterable, Identifiable, Sendable {
     case mlx
     case cuda
+    case cuda3090
 
     static let host = "100.85.200.56"
 
@@ -13,6 +14,15 @@ enum StudioEngine: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .mlx: "Mac · Local MLX"
         case .cuda: "RTX 3060 · .54"
+        case .cuda3090: "RTX 3090 · .51 · GPUQ"
+        }
+    }
+
+    var shortName: String {
+        switch self {
+        case .mlx: "Mac MLX"
+        case .cuda: "RTX 3060"
+        case .cuda3090: "RTX 3090 · GPUQ"
         }
     }
 
@@ -20,6 +30,7 @@ enum StudioEngine: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .mlx: 7861
         case .cuda: 7863
+        case .cuda3090: 7864
         }
     }
 

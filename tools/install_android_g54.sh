@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 TASK_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-TASK_APK=${1:-"$TASK_ROOT/outputs/android/UniForgeStudio-0.1.1.apk"}
+TASK_APK=${1:-"$TASK_ROOT/outputs/android/UniForgeStudio-0.2.0.apk"}
 TASK_SERIAL=127.0.0.1:15555
 test -f "$TASK_APK" || { echo 'Build the signed APK first with tools/build_android.sh.' >&2; exit 1; }
 "$HOME/.local/bin/g54-cua" start

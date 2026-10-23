@@ -7,6 +7,14 @@ public class StudioEndpointTest {
     @Test public void acceptsBothQueuesAndAssetPaths() {
         assertTrue(StudioEndpoint.isAllowed(StudioEndpoint.MLX));
         assertTrue(StudioEndpoint.isAllowed(StudioEndpoint.CUDA + "api/jobs/123/download"));
+        assertTrue(StudioEndpoint.isAllowed(StudioEndpoint.CUDA3090 + "api/jobs/123/download"));
+    }
+    @Test public void restoresAllThreeSelectionsAndMigratesTheOldCudaPreference() {
+        assertEquals(StudioEndpoint.CUDA, StudioEndpoint.restore(null, true));
+        assertEquals(StudioEndpoint.MLX, StudioEndpoint.restore(null, false));
+        assertEquals(StudioEndpoint.CUDA3090, StudioEndpoint.restore(StudioEndpoint.CUDA3090, false));
+        assertEquals(StudioEndpoint.MLX, StudioEndpoint.restore(StudioEndpoint.MLX, true));
+        assertEquals(StudioEndpoint.MLX, StudioEndpoint.restore("http://unexpected.example/", false));
     }
     @Test public void refusesDifferentHostsAndPorts() {
         assertFalse(StudioEndpoint.isAllowed("http://100.85.200.56.evil.test:7861/"));

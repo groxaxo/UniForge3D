@@ -37,6 +37,22 @@ final class StudioUITests: XCTestCase {
         XCTAssertTrue(app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Face reference (optional)")).firstMatch.waitForExistence(timeout: 10))
     }
 
+    func testGPUQBackendIsSelectableAndPersistsAcrossRelaunch() {
+        let app = launchStudio()
+        app.buttons["studio.engine-menu"].tap()
+        XCTAssertTrue(app.buttons["RTX 3090 · .51 · GPUQ"].waitForExistence(timeout: 5))
+        app.buttons["RTX 3090 · .51 · GPUQ"].tap()
+        XCTAssertTrue(app.webViews.staticTexts["RTX 3090 · .51 · GPUQ"].waitForExistence(timeout: 45), app.debugDescription)
+        app.terminate()
+        app.launchArguments = []
+        app.launch()
+        XCTAssertTrue(app.webViews.staticTexts["RTX 3090 · .51 · GPUQ"].waitForExistence(timeout: 45), app.debugDescription)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "RTX 3090 GPUQ selected on iPhone"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     func testGLBDownloadAppearsInNativeDownloads() {
         let app = launchStudio()
         let assetDownload = app.webViews.links.matching(NSPredicate(format: "label BEGINSWITH %@", "Download GLB")).firstMatch

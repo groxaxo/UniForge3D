@@ -7,8 +7,11 @@ downloads through Android DownloadManager. It does not ship or run MLX/CUDA mode
 on the phone. The Mac or remote GPU continues to run generation and face correction.
 
 The native top bar switches between **Mac · Local MLX** on
-`http://100.85.200.56:7861/` and **RTX 3060 · .54** through the Mac's independent
-queue on port 7863. The selected engine survives relaunch. The current web UI,
+`http://100.85.200.56:7861/`, **RTX 3060 · .54** through the independent queue on
+port 7863, and **RTX 3090 · .51 · GPUQ** on port 7864. The `.51` route uses only
+the existing port-12434 proxy and shared GPUQ. See [backend routing](../BACKENDS.md).
+The selected engine survives relaunch; existing two-engine preferences migrate.
+The current web UI,
 including **Preserve face**, is served by that backend, so frontend improvements
 do not require another APK. Keep the Mac service and Tailscale running.
 
@@ -24,7 +27,7 @@ Homebrew paths used on this Mac, then run from the repository root:
 ```
 
 This runs the origin-policy tests, release build and Android lint, verifies the
-APK signature, and writes `outputs/android/UniForgeStudio-0.1.1.apk` plus its SHA256.
+APK signature, and writes `outputs/android/UniForgeStudio-0.2.0.apk` plus its SHA256.
 The private upgrade signing key is created once under
 `~/.local/share/uniforge3d/android/`, with private directory/file permissions.
 Keep it for upgrades. It is not stored in this repository. An existing or partial
@@ -51,7 +54,7 @@ listener. Unlock the phone normally if it requests a PIN.
   controller, fixing the Moto G54 startup crash.
 - React, local WebGL/model-viewer and DOM storage are enabled for Studio. No
   JavaScript-to-native bridge or arbitrary server input is exposed.
-- In-app navigation is limited to the two private Studio origins. Cleartext HTTP
+- In-app navigation is limited to the three private Studio origins. Cleartext HTTP
   is permitted only to that Mac's Tailscale address; certificate errors are cancelled.
 - File selection uses Android's system document picker. Only user-selected image
   URIs are returned; broad photo/storage permissions are not requested.

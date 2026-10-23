@@ -1,14 +1,16 @@
 # UniForge Studio for iOS
 
 A SwiftUI iPhone/iPad app hosting the existing Studio generation interface in
-WKWebView. Native controls switch between **Mac · Local MLX** and **RTX 3060 · .54**,
+WKWebView. The native server-icon menu switches between **Mac · Local MLX**,
+**RTX 3060 · .54** and **RTX 3090 · .51 · GPUQ**,
 refresh the page, and show saved downloads with system sharing / Save to Files.
 The web interface includes **Preserve face**, ordered reference images, job
 progress, cancellation and the interactive textured/clay GLB preview.
 
 Generation and optional face-photo correction run on the existing Mac/GPU
 backends. No MLX/CUDA weights are bundled or executed on iOS. Keep Studio and
-Tailscale running; the private queues are `100.85.200.56:7861` and `:7863`.
+Tailscale running; the private queues are `100.85.200.56:7861`, `:7863` and `:7864`.
+See [backend routing and GPUQ](../BACKENDS.md). Version 0.2.0 saves all three choices.
 
 ## Open, build and run
 
@@ -44,7 +46,8 @@ viewer; the helper still installs/launches the app and prints a screenshot comma
 
 Unit tests cover exact-origin restrictions, filename/path handling, unique file
 names and benign-vs-real navigation errors. Live UI tests require the Mac Studio
-service and its existing completed assets. They exercise native engine switching,
+services on 7861/7864 and the existing completed assets. They exercise native
+engine switching and `.51` selection across relaunch,
 the Preserve face checkbox, a completed GLB download into native Downloads,
 native photo selection using a public repository demo image, and the completed
 Monkey King asset's textured/clay WebGL preview. They do not submit

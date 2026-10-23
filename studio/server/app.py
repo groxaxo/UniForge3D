@@ -109,6 +109,10 @@ class RemoteBridge:
         return json.loads(result.stdout)
 
     def health(self):
+        if self.engine == 'cuda':
+            return {'connected': True, 'ready': False, 'engine_id': 'cuda',
+                    'local_mlx_ready': False,
+                    'message': 'Select RTX 3090 · .51 · GPUQ on Studio port 7864. The legacy direct CUDA launcher is retired.'}
         remote = self.settings.remote
         code = f'''import json, shutil, subprocess
 from pathlib import Path
@@ -136,6 +140,8 @@ print(json.dumps(health))
         return health
 
     def start(self, job_id, directory, seed):
+        if self.engine == 'cuda':
+            raise RuntimeError('Direct CUDA launch is disabled. Use the RTX 3090 GPUQ backend on port 7864.')
         remote_job = f'{self.settings.remote}/jobs/{job_id}'
         self.ssh(f'mkdir -p {shlex.quote(remote_job + "/input")}')
         # Fixed generated names: user filenames and asset titles never enter shell commands.

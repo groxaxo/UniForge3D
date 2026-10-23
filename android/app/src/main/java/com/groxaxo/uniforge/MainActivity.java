@@ -53,7 +53,8 @@ public class MainActivity extends Activity {
     @SuppressLint("SetJavaScriptEnabled")
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        endpoint = getPreferences(MODE_PRIVATE).getBoolean("cuda", false) ? StudioEndpoint.CUDA : StudioEndpoint.MLX;
+        endpoint = StudioEndpoint.restore(getPreferences(MODE_PRIVATE).getString("endpoint", null),
+            getPreferences(MODE_PRIVATE).getBoolean("cuda", false));
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.WHITE);
@@ -73,15 +74,17 @@ public class MainActivity extends Activity {
         engineButton.setTextColor(Color.rgb(35, 58, 101));
         engineButton.setTextSize(16);
         engineButton.setPadding(dp(4), dp(12), dp(4), dp(12));
+        engineButton.setMinHeight(dp(48));
         engineButton.setOnClickListener(this::selectEngine);
         updateEngineTitle();
-        bar.addView(engineButton, new LinearLayout.LayoutParams(0, dp(48), 1));
+        bar.addView(engineButton, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         Button refresh = new Button(this);
         refresh.setText("↻");
         refresh.setTextSize(23);
         refresh.setContentDescription(getString(R.string.refresh));
+        refresh.setMinimumHeight(dp(48));
         refresh.setOnClickListener(view -> loadStudio());
-        bar.addView(refresh, new LinearLayout.LayoutParams(dp(52), dp(48)));
+        bar.addView(refresh, new LinearLayout.LayoutParams(dp(52), ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(bar);
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         root.addView(progress, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3)));
@@ -172,7 +175,8 @@ public class MainActivity extends Activity {
     }
 
     private void updateEngineTitle() {
-        engineButton.setText(endpoint.equals(StudioEndpoint.CUDA) ? getString(R.string.engine_cuda) : getString(R.string.engine_mlx));
+        engineButton.setText(getString(endpoint.equals(StudioEndpoint.CUDA3090) ? R.string.engine_cuda3090
+            : endpoint.equals(StudioEndpoint.CUDA) ? R.string.engine_cuda : R.string.engine_mlx));
         engineButton.setContentDescription(getString(R.string.choose_engine));
     }
 
@@ -180,9 +184,11 @@ public class MainActivity extends Activity {
         PopupMenu menu = new PopupMenu(this, anchor);
         menu.getMenu().add(0, 1, 0, getString(R.string.menu_mlx));
         menu.getMenu().add(0, 2, 1, getString(R.string.menu_cuda));
+        menu.getMenu().add(0, 3, 2, getString(R.string.menu_cuda3090));
         menu.setOnMenuItemClickListener(item -> {
-            endpoint = item.getItemId() == 2 ? StudioEndpoint.CUDA : StudioEndpoint.MLX;
-            getPreferences(MODE_PRIVATE).edit().putBoolean("cuda", item.getItemId() == 2).apply();
+            endpoint = item.getItemId() == 3 ? StudioEndpoint.CUDA3090
+                : item.getItemId() == 2 ? StudioEndpoint.CUDA : StudioEndpoint.MLX;
+            getPreferences(MODE_PRIVATE).edit().putString("endpoint", endpoint).apply();
             updateEngineTitle(); loadStudio(); return true;
         });
         menu.show();

@@ -172,6 +172,8 @@ export default function App() {
           title={
             health?.engine_id === "mlx"
               ? `${health.gpu || "Apple Silicon"} · Local MLX with the verified selective oQ5 bundle. One job runs at a time.`
+              : health?.engine_id === "cuda3090"
+              ? health.message
               : health?.gpu_error
               ? health.message
               : health?.connected
@@ -185,6 +187,8 @@ export default function App() {
           <span>
             {health?.engine_id === "mlx"
               ? health.ready ? "Local MLX ready" : "Local MLX needs attention"
+              : health?.engine_id === "cuda3090"
+              ? health.ready ? "RTX 3090 · .51 · GPUQ" : "RTX 3090 needs attention"
               : health?.gpu_error
               ? "GPU needs attention"
               : health?.connected

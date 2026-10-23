@@ -1,0 +1,39 @@
+plugins { id 'com.android.application' }
+
+def credentialsFile = new File(System.getenv('UNIFORGE_SIGNING_PROPERTIES') ?: "${System.getProperty('user.home')}/.local/share/uniforge3d/android/signing.properties")
+def credentials = new Properties()
+if (credentialsFile.exists()) credentialsFile.withInputStream { credentials.load(it) }
+
+android {
+    namespace 'com.groxaxo.uniforge'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.groxaxo.uniforge'
+        minSdk 28
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+    }
+    signingConfigs {
+        if (credentialsFile.exists()) {
+            release {
+                storeFile file(credentials.getProperty('storeFile'))
+                storePassword credentials.getProperty('storePassword')
+                keyAlias credentials.getProperty('keyAlias')
+                keyPassword credentials.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (credentialsFile.exists()) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildFeatures { buildConfig true }
+}
+dependencies { testImplementation 'junit:junit:4.13.2' }

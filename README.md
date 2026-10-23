@@ -25,6 +25,12 @@ conda activate uniforge3d
 
 ## Inference
 
+The [Android Studio client](android/README.md) opens the same interface on the
+Moto G54 over Tailscale, with native image picking and downloads. Build its signed
+APK with `./tools/build_android.sh`, then install using
+`./tools/install_android_g54.sh`. Generation continues on the selected Mac or CUDA
+backend.
+
 For the local browser interface on this Mac, double-click
 `Open UniForge Studio.command` or run `./tools/studio_service.sh install` and open
 **http://127.0.0.1:7861** on the Mac or **http://100.85.200.56:7861** from another Tailscale device. The frontend and API listen on **0.0.0.0:7861**. [UniForge Studio](studio/README.md) provides one-to-four-view

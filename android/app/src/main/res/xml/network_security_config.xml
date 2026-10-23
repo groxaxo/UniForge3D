@@ -1,0 +1,6 @@
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">100.85.200.56</domain>
+    </domain-config>
+</network-security-config>

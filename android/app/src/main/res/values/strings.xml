@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">UniForge Studio</string>
+    <string name="engine_mlx">UniForge · Mac MLX ▾</string>
+    <string name="engine_cuda">UniForge · RTX 3060 ▾</string>
+    <string name="choose_engine">Choose generation engine</string>
+    <string name="refresh">Refresh Studio</string>
+    <string name="private_only">This app opens your private Studio only.</string>
+    <string name="no_picker">No image picker is installed.</string>
+    <string name="unavailable">Can’t reach UniForge Studio\n\nConnect to Tailscale and keep Studio running on your Mac.</string>
+    <string name="retry">Try again</string>
+    <string name="saving">Saving to Downloads</string>
+    <string name="download_failed">The download could not start. Please try again.</string>
+    <string name="menu_mlx">Mac · Local MLX</string>
+    <string name="menu_cuda">RTX 3060 · .54</string>
+</resources>

@@ -31,6 +31,11 @@ APK with `./tools/build_android.sh`, then install using
 `./tools/install_android_g54.sh`. Generation continues on the selected Mac or CUDA
 backend.
 
+The [iOS Studio client](ios/README.md) supports iPhone and iPad with native engine
+switching, photo selection, downloads and sharing. Build it with
+`./tools/build_ios.sh simulator` or export a signed development IPA with
+`./tools/build_ios.sh device`. Generation runs on the selected Mac or CUDA backend.
+
 For the local browser interface on this Mac, double-click
 `Open UniForge Studio.command` or run `./tools/studio_service.sh install` and open
 **http://127.0.0.1:7861** on the Mac or **http://100.85.200.56:7861** from another Tailscale device. The frontend and API listen on **0.0.0.0:7861**. [UniForge Studio](studio/README.md) provides one-to-four-view

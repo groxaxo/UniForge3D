@@ -1,0 +1,80 @@
+name: UniForgeStudio
+options:
+  bundleIdPrefix: com.groxaxo
+  deploymentTarget:
+    iOS: '18.0'
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    IPHONEOS_DEPLOYMENT_TARGET: '18.0'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: GV8YC56858
+    MARKETING_VERSION: '0.1.0'
+    CURRENT_PROJECT_VERSION: '1'
+targets:
+  UniForgeStudio:
+    type: application
+    platform: iOS
+    sources:
+      - path: UniForgeStudio
+    info:
+      path: UniForgeStudio/Info.plist
+      properties:
+        CFBundleDisplayName: UniForge Studio
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSAppTransportSecurity:
+          NSExceptionDomains:
+            '100.85.200.56':
+              NSIncludesSubdomains: false
+              NSExceptionAllowsInsecureHTTPLoads: true
+        NSLocalNetworkUsageDescription: Connect to UniForge Studio on your Mac over your private network.
+        NSCameraUsageDescription: Take a reference image for your 3D asset.
+        NSPhotoLibraryUsageDescription: Select reference images and a matching face photo for your 3D asset.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.groxaxo.uniforge.ios
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  UniForgeStudioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: UniForgeStudioTests
+    dependencies:
+      - target: UniForgeStudio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.groxaxo.uniforge.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+  UniForgeStudioUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UniForgeStudioUITests
+    dependencies:
+      - target: UniForgeStudio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.groxaxo.uniforge.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  UniForgeStudio:
+    build:
+      targets:
+        UniForgeStudio: all
+    test:
+      targets:
+        - UniForgeStudioTests
+        - UniForgeStudioUITests

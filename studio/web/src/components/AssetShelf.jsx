@@ -64,6 +64,7 @@ export default function AssetShelf({ assets, selectedId, onSelect, onRetry }) {
                     className="secondary-button"
                     href={asset.download_url}
                     download
+                    aria-label={`Download GLB for ${asset.name}`}
                   >
                     <Download size={18} />
                     <span>Download GLB</span>

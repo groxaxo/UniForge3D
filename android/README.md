@@ -24,7 +24,7 @@ Homebrew paths used on this Mac, then run from the repository root:
 ```
 
 This runs the origin-policy tests, release build and Android lint, verifies the
-APK signature, and writes `outputs/android/UniForgeStudio-0.1.0.apk` plus its SHA256.
+APK signature, and writes `outputs/android/UniForgeStudio-0.1.1.apk` plus its SHA256.
 The private upgrade signing key is created once under
 `~/.local/share/uniforge3d/android/`, with private directory/file permissions.
 Keep it for upgrades. It is not stored in this repository. An existing or partial
@@ -40,11 +40,15 @@ calling Gradle directly. The standard build helper maintains the default identit
 
 The helper uses the existing `g54-cua` SSH/ADB tunnel, checks the exact phone model,
 installs without clearing app data, copies the APK to the phone's Downloads folder,
-and launches `com.groxaxo.uniforge/.MainActivity`. It never connects to a public ADB
+and launches `com.groxaxo.uniforge/.MainActivity`. It checks that the activity stays
+in the foreground after Android settles, so an immediate startup crash fails the
+install check. It never connects to a public ADB
 listener. Unlock the phone normally if it requests a PIN.
 
 ## Behavior
 
+- Version 0.1.1 installs the window content before configuring the system-bar
+  controller, fixing the Moto G54 startup crash.
 - React, local WebGL/model-viewer and DOM storage are enabled for Studio. No
   JavaScript-to-native bridge or arbitrary server input is exposed.
 - In-app navigation is limited to the two private Studio origins. Cleartext HTTP
